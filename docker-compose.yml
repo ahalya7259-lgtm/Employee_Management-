@@ -1,0 +1,49 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: employeehub-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-employeehub}
+      MYSQL_USER: ${MYSQL_USER:-employeehub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-employeehub_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - employeehub-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: employeehub-backend
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-employeehub}
+      MYSQL_USER: ${MYSQL_USER:-employeehub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-employeehub_pass}
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-secret-at-least-256-bits-long-for-production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      SPRING_PROFILES_ACTIVE: dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - employeehub-net
+
+volumes:
+  mysql_data:
+
+networks:
+  employeehub-net:
+    driver: bridge
